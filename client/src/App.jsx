@@ -20,7 +20,7 @@ import GameBoard from './components/GameBoard';
 import './App.css';
 
 // Server URL from environment variable, falls back to localhost for development
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'https://catan-backend-pjc1.onrender.com';
 
 // Keep server alive by pinging every 4 minutes (Render free tier spins down after 15 min)
 const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000;
