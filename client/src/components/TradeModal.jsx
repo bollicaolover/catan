@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { postPlatformMoveUpdate } from '../platformEmbed';
 import './TradeModal.css';
 
 const RESOURCES = ['brick', 'lumber', 'wool', 'grain', 'ore'];
@@ -64,6 +65,11 @@ function TradeModal({ socket, gameState, myPlayer, isMyTurn, onClose, addNotific
         addNotification(response.error);
       } else {
         addNotification('Trade accepted!');
+        const partner = gameState.players[pendingTrade.from];
+        postPlatformMoveUpdate(
+          myPlayer.name,
+          `Intercambió recursos con ${partner?.name ?? 'otro jugador'}`
+        );
         onClose(); // Close modal after accepting
       }
     });
@@ -105,6 +111,10 @@ function TradeModal({ socket, gameState, myPlayer, isMyTurn, onClose, addNotific
     socket.emit('bankTrade', { giveResource: bankGive, giveAmount: ratio, getResource: bankGet }, (response) => {
       if (response.success) {
         addNotification(`Traded ${ratio} ${bankGive} for 1 ${bankGet}!`);
+        postPlatformMoveUpdate(
+          myPlayer.name,
+          `Comerció con el banco: ${ratio} ${bankGive} por 1 ${bankGet}`
+        );
         onClose(); // Close modal after successful trade
       } else {
         addNotification(response.error);

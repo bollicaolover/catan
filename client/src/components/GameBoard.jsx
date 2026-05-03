@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import HexBoard from './HexBoard';
 import PlayerPanel from './PlayerPanel';
 import ResourceCards from './ResourceCards';
@@ -11,9 +11,15 @@ import DiscardModal from './DiscardModal';
 import CardReveal from './CardReveal';
 import InfoPopup, { useInfoPopup, INFO_DATA } from './InfoPopup';
 import Confetti from './Confetti';
+import {
+  isPlatformHideChat,
+  postPlatformMoveUpdate,
+  describeGameStatePlatformMove,
+} from '../platformEmbed';
 import './GameBoard.css';
 
 function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeaveGame, addNotification }) {
+  const hidePlatformChat = useMemo(() => isPlatformHideChat(), []);
   const [selectedAction, setSelectedAction] = useState(null); // 'settlement', 'road', 'city'
   const [lastPlacedSettlement, setLastPlacedSettlement] = useState(null);
   const [showTradeModal, setShowTradeModal] = useState(false);
@@ -29,7 +35,8 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
   const [lastNotifiedRoll, setLastNotifiedRoll] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [lastMessageCount, setLastMessageCount] = useState(0);
-  
+  const prevGameStateRef = useRef(null);
+
   // Info popup for right-click
   const { popup: infoPopup, showInfo, showHexInfo, closePopup: closeInfoPopup } = useInfoPopup();
   
@@ -47,6 +54,15 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
   const isSpecialBuildPhase = gameState.specialBuildingPhase && gameState.turnPhase === 'specialBuild';
   const isMySpecialBuild = isSpecialBuildPhase && gameState.specialBuildIndex === gameState.myIndex;
   const canBuildNow = isMyTurn || isMySpecialBuild;
+
+  // Historial de jugadas para el iframe padre (plataforma)
+  useEffect(() => {
+    const prev = prevGameStateRef.current;
+    prevGameStateRef.current = gameState;
+    if (!prev) return;
+    const msg = describeGameStatePlatformMove(prev, gameState);
+    if (msg) postPlatformMoveUpdate(msg.player, msg.move);
+  }, [gameState]);
 
   // Auto-hide dice display after 5 seconds
   useEffect(() => {
@@ -159,6 +175,7 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
 
   // Track new chat messages for notification dot
   useEffect(() => {
+    if (hidePlatformChat) return;
     if (chatMessages.length > lastMessageCount) {
       // Only increment unread if chat is closed and message is from another player
       if (!showChat) {
@@ -170,14 +187,15 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
       }
       setLastMessageCount(chatMessages.length);
     }
-  }, [chatMessages, lastMessageCount, showChat, playerId]);
+  }, [chatMessages, lastMessageCount, showChat, playerId, hidePlatformChat]);
 
   // Reset unread count when chat is opened
   useEffect(() => {
+    if (hidePlatformChat) return;
     if (showChat) {
       setUnreadMessages(0);
     }
-  }, [showChat]);
+  }, [showChat, hidePlatformChat]);
 
   // Auto-open trade modal when there's a pending trade from another player
   useEffect(() => {
@@ -361,11 +379,12 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
     socket.emit('buyDevCard', (response) => {
       if (response.success) {
         setRevealedCard(response.card);
+        postPlatformMoveUpdate(myPlayer.name, 'Compró una carta de desarrollo');
       } else {
         addNotification(response.error);
       }
     });
-  }, [socket, addNotification]);
+  }, [socket, addNotification, myPlayer.name]);
 
   const handleStartGame = useCallback(() => {
     socket.emit('startGame', (response) => {
@@ -379,11 +398,12 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
     socket.emit('shuffleBoard', (response) => {
       if (response.success) {
         addNotification('Board shuffled!');
+        postPlatformMoveUpdate(myPlayer.name, 'Barajó el tablero');
       } else {
         addNotification(response.error);
       }
     });
-  }, [socket, addNotification]);
+  }, [socket, addNotification, myPlayer.name]);
 
   const handleSendChat = useCallback((message) => {
     socket.emit('chatMessage', { message });
@@ -578,15 +598,17 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
             </>
           )}
           
-          <button 
-            className="chat-toggle"
-            onClick={() => setShowChat(!showChat)}
-          >
-            💬 Chat
-            {unreadMessages > 0 && (
-              <span className="chat-notification-dot">{unreadMessages}</span>
-            )}
-          </button>
+          {!hidePlatformChat && (
+            <button 
+              className="chat-toggle"
+              onClick={() => setShowChat(!showChat)}
+            >
+              💬 Chat
+              {unreadMessages > 0 && (
+                <span className="chat-notification-dot">{unreadMessages}</span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -747,7 +769,7 @@ function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeav
       )}
 
       {/* Chat panel */}
-      {showChat && (
+      {!hidePlatformChat && showChat && (
         <Chat 
           messages={chatMessages}
           onSend={handleSendChat}

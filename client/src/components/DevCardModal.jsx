@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { postPlatformMoveUpdate } from '../platformEmbed';
 import './DevCardModal.css';
 
 const DEV_CARD_INFO = {
@@ -59,6 +60,10 @@ function DevCardModal({ socket, myPlayer, isMyTurn, turnPhase, yearOfPlentyPicks
     socket.emit('playDevCard', { cardType, params: {} }, (response) => {
       if (response.success) {
         addNotification(`Played ${DEV_CARD_INFO[cardType].name}!`);
+        // Caballero: el cambio de fase ya se refleja en describeGameStatePlatformMove
+        if (cardType !== 'knight') {
+          postPlatformMoveUpdate(myPlayer.name, `Jugó carta: ${DEV_CARD_INFO[cardType].name}`);
+        }
         if (cardType === 'knight' || cardType === 'roadBuilding') {
           onClose();
         }
@@ -80,6 +85,7 @@ function DevCardModal({ socket, myPlayer, isMyTurn, turnPhase, yearOfPlentyPicks
     }, (response) => {
       if (response.success) {
         addNotification(`Monopoly on ${monopolyResource}!`);
+        postPlatformMoveUpdate(myPlayer.name, `Monopolio sobre ${monopolyResource}`);
         onClose();
       } else {
         addNotification(response.error);
@@ -89,7 +95,9 @@ function DevCardModal({ socket, myPlayer, isMyTurn, turnPhase, yearOfPlentyPicks
 
   const handleYearOfPlentyPick = (resource) => {
     socket.emit('yearOfPlentyPick', { resource }, (response) => {
-      if (!response.success) {
+      if (response.success) {
+        postPlatformMoveUpdate(myPlayer.name, `Año de abundancia: tomó ${resource}`);
+      } else {
         addNotification(response.error);
       }
     });

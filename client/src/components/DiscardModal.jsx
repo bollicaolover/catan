@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { postPlatformMoveUpdate } from '../platformEmbed';
 import './DiscardModal.css';
 
 const RESOURCES = ['brick', 'lumber', 'wool', 'grain', 'ore'];
@@ -29,7 +30,9 @@ function DiscardModal({ socket, player, cardsToDiscard, addNotification }) {
     }
 
     socket.emit('discardCards', { resources: selected }, (response) => {
-      if (!response.success) {
+      if (response.success) {
+        postPlatformMoveUpdate(player.name, `Descartó ${cardsToDiscard} cartas`);
+      } else {
         addNotification(response.error);
       }
     });
