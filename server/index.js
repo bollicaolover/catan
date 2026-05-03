@@ -13,7 +13,7 @@
  * - Connection limits for free tier hosting
  * - Keep-alive ping endpoint for Render free tier
  * 
- * @author Viral Doshi
+ * @author G1904
  */
 
 import express from 'express';
@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
       health: '/health',
       socket: 'ws://[this-url]'
     },
-    author: 'Viral Doshi'
+    author: 'G1904'
   });
 });
 

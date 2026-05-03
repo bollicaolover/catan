@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import HexBoard from './HexBoard';
 import PlayerPanel from './PlayerPanel';
 import ResourceCards from './ResourceCards';
@@ -19,7 +19,7 @@ import {
 import './GameBoard.css';
 
 function GameBoard({ socket, gameState, playerId, gameCode, chatMessages, onLeaveGame, addNotification }) {
-  const hidePlatformChat = useMemo(() => isPlatformHideChat(), []);
+  const hidePlatformChat = isPlatformHideChat();
   const [selectedAction, setSelectedAction] = useState(null); // 'settlement', 'road', 'city'
   const [lastPlacedSettlement, setLastPlacedSettlement] = useState(null);
   const [showTradeModal, setShowTradeModal] = useState(false);

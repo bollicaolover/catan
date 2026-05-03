@@ -2,9 +2,27 @@
  * Integración con la plataforma (iframe padre): ocultar chat y historial de jugadas.
  */
 
+function hideChatParamIsOn(params) {
+  if (!params) return false;
+  const raw =
+    params.get('hideChat') ??
+    params.get('hidechat');
+  if (raw == null) return false;
+  const v = String(raw).trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
+/** true si la URL pide ocultar chat (query o hash), p. ej. ?hideChat=1 */
 export function isPlatformHideChat() {
   try {
-    return new URLSearchParams(window.location.search).get('hideChat') === '1';
+    if (typeof window === 'undefined') return false;
+    if (hideChatParamIsOn(new URLSearchParams(window.location.search))) return true;
+    const hash = window.location.hash;
+    const q = hash.indexOf('?');
+    if (q !== -1) {
+      if (hideChatParamIsOn(new URLSearchParams(hash.slice(q + 1)))) return true;
+    }
+    return false;
   } catch {
     return false;
   }
